@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Emine's Driving Test</title>
+
+  <!-- PWA / Add to Home Screen -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Drive 🚗" />
+  <meta name="theme-color" content="#faf6f3" />
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: #faf6f3; -webkit-tap-highlight-color: transparent; }
+    ::-webkit-scrollbar { width: 0; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.8); }
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes popIn {
+      from { opacity: 0; transform: scale(0.88) translateY(12px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    @keyframes cardReveal {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .pulse-dot { animation: pulse 1.5s ease-in-out infinite; }
+    .fade-up   { animation: fadeUp 0.35s ease both; }
+    .pop-in    { animation: popIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both; }
+    .card-in   { animation: cardReveal 0.3s ease both; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useCallback } = React;
+
+    // ─── Data ─────────────────────────────────────────────────────────────────
+
+    const QUESTIONS = [
+      { id:1,  type:"Tell Me", question:"How would you check that the brakes are working before starting a journey?", answer:"Brakes should not feel spongy or slack. Test them as you set off — the pedal should feel firm and the car should pull up in a straight line." },
+      { id:2,  type:"Tell Me", question:"Where would you find the recommended tyre pressures for this car, and how should they be checked?", answer:"Check the owner's manual or the sticker inside the driver's door or fuel cap. Tyres must be cold when checked. Use an accurate pressure gauge, including on the spare." },
+      { id:3,  type:"Tell Me", question:"How would you make sure your head restraint is correctly adjusted?", answer:"The rigid part of the head restraint should be at least as high as your eyes or the top of your ears, and as close to the back of your head as comfortable." },
+      { id:4,  type:"Tell Me", question:"How would you check the tyres have sufficient tread depth and are safe to use?", answer:"No cuts or bulges. Legal minimum tread depth is 1.6mm across the central three-quarters of the tyre, all the way round. Use a tread depth gauge or check the built-in wear indicators." },
+      { id:5,  type:"Tell Me", question:"How would you check that the headlights and tail lights are working?", answer:"Switch on the ignition and lights, then walk around the vehicle. Alternatively, use your reflection in a garage door or wall to check the front lights." },
+      { id:6,  type:"Tell Me", question:"How would you know if there was a problem with your anti-lock braking system?", answer:"The ABS warning light comes on briefly at start-up and should go out once you move. If it stays on while driving, there's a fault." },
+      { id:7,  type:"Tell Me", question:"How would you check the direction indicators are working?", answer:"Switch on the ignition, activate the hazard lights, then walk around to check all four corners are flashing." },
+      { id:8,  type:"Tell Me", question:"How would you check the brake lights are working?", answer:"Ask someone to stand behind the car while you press the brake pedal. Or reverse close to a reflective surface and check the reflection." },
+      { id:9,  type:"Tell Me", question:"How would you check that power-assisted steering is working before starting a journey?", answer:"Apply gentle pressure to the steering wheel before starting. When the engine starts, the wheel should noticeably lighten — that confirms power steering is working." },
+      { id:10, type:"Tell Me", question:"How would you check the engine has sufficient oil?", answer:"Remove the dipstick, wipe it clean, reinsert fully, then remove again. The oil level should sit between the min and max markers. Top up with the correct grade if low." },
+      { id:11, type:"Tell Me", question:"How would you check the engine has sufficient coolant?", answer:"Only check when cold. Find the coolant reservoir under the bonnet and confirm the level sits between the min and max marks. Top up with the correct mix if needed." },
+      { id:12, type:"Tell Me", question:"How would you check the windscreen washer fluid level?", answer:"Locate the washer reservoir (usually marked with a windscreen symbol) under the bonnet. Check the level and top up with screenwash solution if needed." },
+      { id:13, type:"Tell Me", question:"How would you switch your headlights from dipped to full beam, and how would you know full beam is on?", answer:"Pull or push the indicator/light stalk (varies by car) to activate full beam. A blue warning light on the dashboard confirms it's on." },
+      { id:14, type:"Tell Me", question:"Tell me how you'd check the parking brake is working.", answer:"Apply the parking brake, then gently try to move forward in first gear with a little throttle. The car should not move." },
+      { id:15, type:"Show Me", question:"When it's safe to do so, show me how you'd wash and clean the rear windscreen.", answer:"Locate and operate the rear wash/wipe control — usually a stalk or button. Activate it and confirm the rear wiper and washer are working." },
+      { id:16, type:"Show Me", question:"When it's safe to do so, show me how you'd switch on the rear fog light(s) and explain when you'd use them.", answer:"Press the rear fog light button (rear fog symbol). Use them only when visibility drops below 100 metres — not in light rain or mist." },
+      { id:17, type:"Show Me", question:"When it's safe to do so, show me how you'd demist the front windscreen.", answer:"Turn on the blower and direct air to the windscreen. Use warm air and switch on air conditioning if available — it removes moisture faster." },
+      { id:18, type:"Show Me", question:"When it's safe to do so, show me how you'd demist the rear windscreen.", answer:"Press the heated rear windscreen button (rear window with wavy lines). Confirm the indicator light comes on." },
+      { id:19, type:"Show Me", question:"When it's safe to do so, show me how you'd operate the horn.", answer:"Press the horn button or panel in the centre of the steering wheel, keeping both hands on the wheel." },
+      { id:20, type:"Show Me", question:"When it's safe to do so, show me how you'd increase the temperature in the car.", answer:"Locate the temperature control (dial or digital) and adjust it toward a warmer setting." },
+      { id:21, type:"Show Me", question:"When it's safe to do so, show me how you'd reduce the temperature in the car.", answer:"Adjust the temperature control to a cooler setting, or press the air conditioning button to cool quickly." },
+      { id:22, type:"Show Me", question:"When it's safe to do so, show me how you'd operate the windscreen wipers.", answer:"Locate the wiper stalk (usually right of steering column) and demonstrate normal and intermittent settings. Show how to increase wipe speed." },
+    ];
+
+    const CELEBRATIONS = [
+      { emoji:"💅", line1:"You bossed that", line2:"like a bad bitch, Emine." },
+      { emoji:"🌮", line1:"Well done — go treat yourself", line2:"to a Gyros, Emine." },
+      { emoji:"✨", line1:"Go on Emine,", line2:"get your nails done." },
+      { emoji:"👑", line1:"That's pure", line2:"Emine energy right there." },
+      { emoji:"🎉", line1:"Three out of three.", line2:"You're basically passing already." },
+      { emoji:"🔥", line1:"Nailed it.", line2:"The examiner won't know what hit them." },
+    ];
+
+    const DAILY_COUNT = 3;
+    const TODAY = new Date().toISOString().split("T")[0];
+
+    function shuffle(arr) { return [...arr].sort(() => Math.random() - 0.5); }
+
+    // ─── localStorage helpers ─────────────────────────────────────────────────
+
+    function lsGet(key) {
+      try { return localStorage.getItem(key); } catch { return null; }
+    }
+    function lsSet(key, val) {
+      try { localStorage.setItem(key, val); } catch {}
+    }
+
+    // ─── Card ─────────────────────────────────────────────────────────────────
+
+    function Card({ question, index, total, onFirstFlip, animDelay }) {
+      const [flipped, setFlipped] = useState(false);
+      const [fired, setFired] = useState(false);
+
+      const handle = () => {
+        const next = !flipped;
+        setFlipped(next);
+        if (next && !fired) { setFired(true); onFirstFlip(); }
+      };
+
+      const isTell = question.type === "Tell Me";
+
+      return (
+        <div className="card-in" style={{ marginBottom:"1.1rem", animationDelay: animDelay }}>
+          <div
+            onClick={handle}
+            style={{
+              background: flipped ? "#fff5f7" : "#ffffff",
+              border: `1.5px solid ${flipped ? "#f9a8c9" : "#e8ddd6"}`,
+              borderRadius: "18px",
+              padding: "1.6rem",
+              cursor: "pointer",
+              transition: "background 0.2s, border-color 0.2s, box-shadow 0.2s",
+              userSelect: "none",
+              WebkitUserSelect: "none",
+              boxShadow: flipped
+                ? "0 4px 24px rgba(236,110,160,0.13)"
+                : "0 2px 10px rgba(180,150,130,0.07)",
+            }}
+          >
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"0.9rem" }}>
+              <span style={{
+                fontSize:"0.6rem",
+                fontFamily:"'DM Mono', monospace",
+                letterSpacing:"0.12em",
+                textTransform:"uppercase",
+                color: isTell ? "#c0527a" : "#7a9e7e",
+                background: isTell ? "rgba(236,110,160,0.1)" : "rgba(122,158,126,0.1)",
+                padding:"3px 10px",
+                borderRadius:"100px",
+              }}>{question.type}</span>
+              <span style={{ fontSize:"0.68rem", color:"#c4b0a8", fontFamily:"'DM Mono', monospace" }}>
+                {index + 1}/{total}
+              </span>
+            </div>
+
+            <p style={{
+              fontSize:"0.97rem",
+              lineHeight:"1.6",
+              color:"#3d2e27",
+              fontFamily:"'DM Sans', sans-serif",
+              fontWeight:400,
+              margin:0,
+              marginBottom: flipped ? "1.1rem" : 0,
+            }}>
+              {question.question}
+            </p>
+
+            {flipped && (
+              <div style={{ borderTop:"1px solid #f0e4e0", paddingTop:"1rem" }}>
+                <p style={{
+                  fontSize:"0.85rem",
+                  fontFamily:"'DM Sans', sans-serif",
+                  lineHeight:"1.7",
+                  color:"#7a6560",
+                  margin:0,
+                }}>
+                  {question.answer}
+                </p>
+              </div>
+            )}
+
+            {!flipped && (
+              <div style={{ marginTop:"1rem", display:"flex", alignItems:"center", gap:"6px" }}>
+                <div className="pulse-dot" style={{ width:"6px", height:"6px", borderRadius:"50%", background:"#ec6ea0", flexShrink:0 }} />
+                <span style={{ fontSize:"0.68rem", color:"#c4a89e", fontFamily:"'DM Mono', monospace", letterSpacing:"0.07em" }}>
+                  tap to reveal
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ─── Celebration ──────────────────────────────────────────────────────────
+
+    function CelebrationBanner({ onGoAgain }) {
+      const [pick] = useState(() => CELEBRATIONS[Math.floor(Math.random() * CELEBRATIONS.length)]);
+      return (
+        <div className="pop-in" style={{
+          marginTop:"1.25rem",
+          background:"linear-gradient(135deg, #fde8f0, #fdf0f8)",
+          border:"1.5px solid #f9a8c9",
+          borderRadius:"20px",
+          padding:"1.75rem",
+          textAlign:"center",
+          boxShadow:"0 8px 32px rgba(236,110,160,0.15)",
+        }}>
+          <div style={{ fontSize:"2.2rem", marginBottom:"0.65rem", lineHeight:1 }}>{pick.emoji}</div>
+          <p style={{
+            fontSize:"1.05rem",
+            fontWeight:500,
+            color:"#3d2e27",
+            fontFamily:"'DM Sans', sans-serif",
+            lineHeight:1.4,
+            margin:0,
+          }}>
+            {pick.line1}<br/>
+            <span style={{ color:"#ec6ea0" }}>{pick.line2}</span>
+          </p>
+
+          <button
+            onClick={onGoAgain}
+            style={{
+              marginTop:"1.25rem",
+              background:"#ec6ea0",
+              color:"#fff",
+              border:"none",
+              borderRadius:"100px",
+              padding:"0.65rem 1.6rem",
+              fontSize:"0.85rem",
+              fontFamily:"'DM Sans', sans-serif",
+              fontWeight:500,
+              cursor:"pointer",
+              letterSpacing:"0.02em",
+              boxShadow:"0 4px 16px rgba(236,110,160,0.3)",
+              transition:"transform 0.15s, box-shadow 0.15s",
+            }}
+            onTouchStart={e => e.currentTarget.style.transform = "scale(0.97)"}
+            onTouchEnd={e => e.currentTarget.style.transform = "scale(1)"}
+          >
+            Go again →
+          </button>
+        </div>
+      );
+    }
+
+    // ─── Main App ─────────────────────────────────────────────────────────────
+
+    function App() {
+      const [questions, setQuestions]     = useState([]);
+      const [flippedCount, setFlippedCount] = useState(0);
+      const [streak, setStreak]           = useState(0);
+      const [totalSeen, setTotalSeen]     = useState(0);
+      const [loaded, setLoaded]           = useState(false);
+      const [round, setRound]             = useState(0); // forces card re-mount on Go Again
+
+      // ── Initial load ────────────────────────────────────────────────────────
+      useEffect(() => {
+        const seenIds     = JSON.parse(lsGet("seen_ids")  || "[]");
+        const lastDate    = lsGet("last_date");
+        let   str         = parseInt(lsGet("streak") || "0");
+
+        if (lastDate && lastDate !== TODAY) {
+          const yest = new Date(); yest.setDate(yest.getDate() - 1);
+          if (lastDate !== yest.toISOString().split("T")[0]) str = 0;
+        }
+
+        setStreak(str);
+        setTotalSeen(seenIds.length);
+
+        // Today's canonical 3 questions (fixed per day)
+        const existing = lsGet(`day_${TODAY}`);
+        if (existing) {
+          const ids = JSON.parse(existing);
+          setQuestions(QUESTIONS.filter(q => ids.includes(q.id)));
+        } else {
+          const pool   = seenIds.length < QUESTIONS.length
+            ? QUESTIONS.filter(q => !seenIds.includes(q.id))
+            : QUESTIONS;
+          const picked = shuffle(pool).slice(0, DAILY_COUNT);
+          const ids    = picked.map(q => q.id);
+          lsSet(`day_${TODAY}`, JSON.stringify(ids));
+          const updated = [...new Set([...seenIds, ...ids])];
+          lsSet("seen_ids",  JSON.stringify(updated));
+          lsSet("last_date", TODAY);
+          const newStr = str + 1;
+          lsSet("streak",    String(newStr));
+          setStreak(newStr);
+          setTotalSeen(updated.length);
+          setQuestions(picked);
+        }
+        setLoaded(true);
+      }, []);
+
+      // ── Go Again: 3 fresh questions not in current set ───────────────────────
+      const handleGoAgain = useCallback(() => {
+        const currentIds = questions.map(q => q.id);
+        const pool = QUESTIONS.filter(q => !currentIds.includes(q.id));
+        const source = pool.length >= DAILY_COUNT ? pool : QUESTIONS;
+        setQuestions(shuffle(source).slice(0, DAILY_COUNT));
+        setFlippedCount(0);
+        setRound(r => r + 1);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }, [questions]);
+
+      const pct = Math.round((totalSeen / QUESTIONS.length) * 100);
+      const done = flippedCount >= questions.length && questions.length > 0;
+
+      return (
+        <div className="fade-up" style={{
+          minHeight:"100vh",
+          background:"#faf6f3",
+          paddingBottom:"env(safe-area-inset-bottom, 40px)",
+          fontFamily:"'DM Sans', sans-serif",
+        }}>
+
+          {/* ── Header ── */}
+          <div style={{
+            padding:"calc(env(safe-area-inset-top, 0px) + 1.75rem) 1.25rem 1.25rem",
+            borderBottom:"1px solid #ede4dc",
+            position:"sticky",
+            top:0,
+            background:"rgba(250,246,243,0.96)",
+            backdropFilter:"blur(14px)",
+            WebkitBackdropFilter:"blur(14px)",
+            zIndex:10,
+          }}>
+            <div style={{ maxWidth:"480px", margin:"0 auto" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+                <div>
+                  <div style={{ display:"flex", alignItems:"center", gap:"7px", marginBottom:"3px" }}>
+                    <span style={{ fontSize:"1rem" }}>🚗</span>
+                    <span style={{
+                      fontSize:"0.6rem",
+                      fontFamily:"'DM Mono', monospace",
+                      letterSpacing:"0.15em",
+                      textTransform:"uppercase",
+                      color:"#b8a49a",
+                    }}>Driving Test</span>
+                  </div>
+                  <h1 style={{ fontSize:"1.45rem", fontWeight:600, color:"#3d2e27", lineHeight:1.2 }}>
+                    Today's Questions
+                  </h1>
+                </div>
+                <div style={{ textAlign:"right" }}>
+                  <div style={{ fontSize:"1.45rem", fontWeight:600, color:"#ec6ea0", lineHeight:1 }}>
+                    {streak} {streak === 1 ? "day" : "days"}
+                  </div>
+                  <div style={{ fontSize:"0.6rem", color:"#c4a89e", fontFamily:"'DM Mono', monospace", marginTop:"2px" }}>
+                    streak 🔥
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginTop:"1.1rem" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:"5px" }}>
+                  <span style={{ fontSize:"0.67rem", color:"#b8a49a", fontFamily:"'DM Mono', monospace" }}>question bank</span>
+                  <span style={{ fontSize:"0.67rem", color:"#b8a49a", fontFamily:"'DM Mono', monospace" }}>{totalSeen}/{QUESTIONS.length}</span>
+                </div>
+                <div style={{ height:"4px", background:"#ede4dc", borderRadius:"100px", overflow:"hidden" }}>
+                  <div style={{
+                    height:"100%", width:`${pct}%`,
+                    background:"linear-gradient(90deg, #ec6ea0, #f9a8c9)",
+                    borderRadius:"100px",
+                    transition:"width 0.6s ease",
+                  }} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Cards ── */}
+          <div style={{ padding:"1.5rem 1.25rem 0", maxWidth:"480px", margin:"0 auto" }}>
+            {!loaded ? (
+              <div style={{ textAlign:"center", color:"#c4a89e", paddingTop:"3rem", fontSize:"0.85rem" }}>
+                Loading...
+              </div>
+            ) : (
+              <>
+                <p style={{
+                  fontSize:"0.72rem", color:"#c4a89e", marginBottom:"1.25rem",
+                  fontFamily:"'DM Mono', monospace", letterSpacing:"0.04em",
+                }}>
+                  {new Date().toLocaleDateString("en-GB", { weekday:"long", day:"numeric", month:"long" })}
+                  {round > 0 && <span style={{ color:"#ec6ea0", marginLeft:"8px" }}>· round {round + 1}</span>}
+                </p>
+
+                {questions.map((q, i) => (
+                  <Card
+                    key={`${round}-${q.id}`}
+                    question={q}
+                    index={i}
+                    total={questions.length}
+                    onFirstFlip={() => setFlippedCount(c => c + 1)}
+                    animDelay={`${i * 0.07}s`}
+                  />
+                ))}
+
+                {done && <CelebrationBanner onGoAgain={handleGoAgain} />}
+
+                {!done && (
+                  <div style={{ borderTop:"1px solid #ede4dc", paddingTop:"1.25rem", marginTop:"0.75rem" }}>
+                    <p style={{
+                      fontSize:"0.68rem", color:"#c4a89e",
+                      fontFamily:"'DM Mono', monospace", lineHeight:1.7, textAlign:"center",
+                    }}>
+                      Tap each card to reveal the answer.
+                    </p>
+                    <div style={{ display:"flex", gap:"1rem", justifyContent:"center", marginTop:"1rem", flexWrap:"wrap" }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:"5px" }}>
+                        <span style={{ width:"7px", height:"7px", borderRadius:"50%", background:"#ec6ea0", display:"inline-block" }} />
+                        <span style={{ fontSize:"0.62rem", color:"#b8a49a", fontFamily:"'DM Mono', monospace" }}>Tell Me — say it aloud</span>
+                      </div>
+                      <div style={{ display:"flex", alignItems:"center", gap:"5px" }}>
+                        <span style={{ width:"7px", height:"7px", borderRadius:"50%", background:"#7a9e7e", display:"inline-block" }} />
+                        <span style={{ fontSize:"0.62rem", color:"#b8a49a", fontFamily:"'DM Mono', monospace" }}>Show Me — while driving</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
